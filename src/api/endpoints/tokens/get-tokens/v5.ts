@@ -85,6 +85,11 @@ export const getTokensV5Options: RouteOptions = {
         .default("floorAskPrice")
         .description("Order the items are returned in the response."),
       sortDirection: Joi.string().lowercase().valid("asc", "desc"),
+      currency: Joi.string()
+        .lowercase()
+        .description(
+          "Filter to tokens with a listing in a particular currency. `Example: 0x0000000000000000000000000000000000000000`"
+        ),
       limit: Joi.number()
         .integer()
         .min(1)
@@ -361,6 +366,9 @@ export const getTokensV5Options: RouteOptions = {
       sourceConditions.push(`o.fillability_status = 'fillable'`);
       sourceConditions.push(`o.approval_status = 'approved'`);
       sourceConditions.push(`o.source_id_int = $/source/`);
+      if (query.currency) {
+        sourceConditions.push(`o.currency = $/currency/`);
+      }
 
       if (query.contract) {
         sourceConditions.push(`tst.contract = $/contract/`);
@@ -537,6 +545,17 @@ export const getTokensV5Options: RouteOptions = {
 
       if (query.collectionsSetId) {
         conditions.push(`csc.collections_set_id = $/collectionsSetId/`);
+      }
+
+      if (query.currency) {
+        (query as any).currency = toBuffer(query.currency);
+
+        if (query.source) {
+          // if source is passed in, then we have two floor_sell_currency columns
+          conditions.push(`s.floor_sell_currency = $/currency/`);
+        } else {
+          conditions.push(`floor_sell_currency = $/currency/`);
+        }
       }
 
       // Continue with the next page, this depends on the sorting used
